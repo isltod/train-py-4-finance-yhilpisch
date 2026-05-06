@@ -69,34 +69,62 @@ c = np.random.randint(0, 10, len(y))
 # plt.grid(True)
 
 # 이번엔 3차원
-strike = np.linspace(50, 150, 24)
-ttm = np.linspace(0.5, 2.5, 22)
-# meshgrid라는게, x(m,), y(n,)을 받아서, x'(n,m), y'(n,m)을 반환하네...
-# 그렇다는 건...x는 행으로 y개만큼 반복, y는 전치하고 열로 x개 만큼 반복한단 말이네...
-strike, ttm = np.meshgrid(strike, ttm)
-iv = (strike - 100) ** 2 / (100 * strike) / ttm
+# strike = np.linspace(50, 150, 24)
+# ttm = np.linspace(0.5, 2.5, 22)
+# # meshgrid라는게, x(m,), y(n,)을 받아서, x'(n,m), y'(n,m)을 반환하네...
+# # 그렇다는 건...x는 행으로 y개만큼 반복, y는 전치하고 열로 x개 만큼 반복한단 말이네...
+# strike, ttm = np.meshgrid(strike, ttm)
+# iv = (strike - 100) ** 2 / (100 * strike) / ttm
 
-from mpl_toolkits.mplot3d import Axes3D
+# from mpl_toolkits.mplot3d import Axes3D
 
-fig = plt.figure(figsize=(10, 6))
-# 이건 옛날 코드...작동 안함...
-# ax = fig.gca(projection="3d")
-# 이걸로 대체...
-ax = fig.add_subplot(projection="3d")
-surf = ax.plot_surface(
-    strike,
-    ttm,
-    iv,
-    rstride=2,
-    cstride=2,
-    cmap=plt.cm.coolwarm,
-    linewidth=0.5,
-    antialiased=True,
-)
-ax.set_xlabel("strike")
-ax.set_ylabel("time to maturity")
-ax.set_zlabel("implied volatility")
-fig.colorbar(surf, shrink=0.5, aspect=5)
+# fig = plt.figure(figsize=(10, 6))
+# # 이건 옛날 코드...작동 안함...
+# # ax = fig.gca(projection="3d")
+# # 이걸로 대체...
+# ax = fig.add_subplot(projection="3d")
+# surf = ax.plot_surface(
+#     strike,
+#     ttm,
+#     iv,
+#     rstride=2,
+#     cstride=2,
+#     cmap=plt.cm.coolwarm,
+#     linewidth=0.5,
+#     antialiased=True,
+# )
+# ax.set_xlabel("strike")
+# ax.set_ylabel("time to maturity")
+# ax.set_zlabel("implied volatility")
+# fig.colorbar(surf, shrink=0.5, aspect=5)
+
+import cufflinks as cf
+import pandas as pd
+
+# ploty 최신 버전은 안되서 pip install plotly==4.14.3
+import plotly.offline as pyo
+
+cf.go_offline()
+
+raw = pd.read_csv("data/fxcm_eur_usd_eod_data.csv", index_col=0, parse_dates=True)
+quotes = raw[["AskOpen", "AskHigh", "AskLow", "AskClose"]]
+quotes = quotes.iloc[-60:]
+qf = cf.QuantFig(quotes, title="EUR/USD Exchange Rate", legend="top", name="EUR/USD")
+qf.add_bollinger_bands(periods=15, boll_std=2)
+qf.add_rsi(periods=14, showbands=False)
+pyo.plot(qf.iplot(asFigure=True))
 
 # 이 명령은 마지막에 한 번
 plt.show()
+
+# plotly 관련해서 정리하면...
+# 1. pip install --upgrade cufflinks
+# 2. pip install plotly==4.14.3
+# 3. 코드 수정
+# import cufflinks as cf
+# import plotly.offline as pyo
+#
+# cf.go_offline()
+#
+# fig = df.iplot(asFigure=True)
+# pyo.plot(fig)
