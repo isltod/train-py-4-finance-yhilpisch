@@ -92,76 +92,24 @@ def dual_SMA(csv, symbol, sma1, sma2, show_plot=False, show_info=False):
     print(results.sort_values(by="OUT", ascending=False).round(4))
 
 
-# 책 예제----------------------------------------------
-# 데이터파일
-filename = "data/tr_eikon_eod_data.csv"
-# 종목 애플
-symbol = "AAPL.O"
-# 장단기 이동평균선
-SMA1 = [42]
-SMA2 = [252]
-more = False
-# 비트코인-----------------------------------------------
-# 데이터파일
-filename = "data/btc_usdt_1m_cache.csv"
-# 종목 애플
-symbol = "close"
-# 비트코인 1분 봉 2주간 테스트...아래 숫자가 제일 나은데...수수료 생각 안하고 7%? 안되겠다...
-SMA1 = [200, 400, 600]
-SMA2 = [800, 1000, 1200]
+if __name__ == "__main__":
+    # 책 예제----------------------------------------------
+    # 데이터파일
+    filename = "data/tr_eikon_eod_data.csv"
+    # 종목 애플
+    symbol = "AAPL.O"
+    # 장단기 이동평균선
+    SMA1 = [42]
+    SMA2 = [252]
+    more = False
+    # 비트코인-----------------------------------------------
+    # 데이터파일
+    filename = "data/btc_usdt_1m_cache.csv"
+    # 종목 애플
+    symbol = "close"
+    # 비트코인 1분 봉 2주간 테스트...아래 숫자가 제일 나은데...수수료 생각 안하고 7%? 안되겠다...
+    SMA1 = [200, 400, 600]
+    SMA2 = [800, 1000, 1200]
 
-# 백테스트
-dual_SMA(filename, symbol, SMA1, SMA2, show_plot=more, show_info=more)
-
-# 2011년에서 2018년까지 7년만에 400~600% 정도 수익이 나는데...
-# 비트코인은 2주간 7%...5분봉 15분봉, 30분봉, 1시간봉, 4시간봉, 일봉....이렇게 해 봐야 하나...
-
-# # Reuters Instrument Code 확인
-# instruments = [
-#     "Apple Stock",
-#     "Microsoft Stock",
-#     "Intel Stock",
-#     "Amazon Stock",
-#     "Goldman Sachs Stock",
-#     "SPDR S&P 500 ETF Trust",
-#     "S&P 500 Index",
-#     "VIX Volatility Index",
-#     "EUR/USD Exchange Rate",
-#     "Gold Price",
-#     "VanEck Vectors Gold Miners ETF",
-#     "SPDR Gold Trust",
-# ]
-# for ric, name in zip(raw.columns, instruments):
-#     print("{:8s} : {}".format(ric, name))
-
-
-# # 로그 수익률
-# rets = np.log(raw / raw.shift(1))
-# print(rets.head().round(3))
-# # 원래 apply는 엄청 느린데...이건 괜찮나? 벡터화해서?
-# # rets.cumsum().apply(np.exp).plot(figsize=(10, 6))
-# rets.cumsum().apply(np.exp).resample("1m", label="right").last().plot(figsize=(10, 6))
-# plt.show()
-
-
-# # 상관관계 - 눈으로 보기엔 꽤 유의미한데 계수는 -0.576503밖에 안나온다...비선형이라서 그런가?
-# raw = pd.read_csv("data/tr_eikon_eod_data.csv", index_col=0, parse_dates=True)
-# data = raw[[".SPX", ".VIX"]].dropna()
-# print(data.corr())
-# # data.loc[:"2012-12-31"].plot(secondary_y=".VIX", figsize=(10, 6))
-# # plt.show()
-# # 로그 수익률과 선형회귀
-# rets = np.log(data / data.shift(1))
-# rets.dropna(inplace=True)
-# # rets.plot(subplots=True, figsize=(10, 6))
-# # pd.plotting.scatter_matrix(rets, alpha=0.2, diagonal="hist", hist_kwds={"bins": 35})
-# # reg = np.polyfit(rets[".SPX"], rets[".VIX"], deg=1)
-# # print(reg)
-# # ax = rets.plot(kind="scatter", x=".SPX", y=".VIX", figsize=(10, 6))
-# # ax.plot(rets[".SPX"], reg[0] * rets[".SPX"] + reg[1], "r", lw=2)
-# # plt.show()
-# # 원래 데이터 상관관계는 -5 정도인데, 단지 차분 값으로 나눴을 뿐인데 -0.804382까지 높아졌다?
-# print(rets.corr())
-# ax = rets[".SPX"].rolling(window=252).corr(rets[".VIX"]).plot(figsize=(10, 6))
-# ax.axhline(rets.corr().iloc[0, 1], color="r")
-# plt.show()
+    # 백테스트
+    dual_SMA(filename, symbol, SMA1, SMA2, show_plot=more, show_info=more)
