@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from itertools import product
 from pylab import mpl, plt
 
 mpl.rcParams["font.family"] = "Malgun Gothic"
@@ -23,57 +24,72 @@ def test_log_return():
 
 
 # 함수로 바꿔보자
-def dual_SMA(csv, symbol, SMA1, SMA2, show_plot=False, show_info=False):
+def dual_SMA(csv, symbol, sma1, sma2, show_plot=False, show_info=False):
     with open(filename, "r") as f:
         raw = pd.read_csv(f, index_col=0, parse_dates=True)
-    data = pd.DataFrame(raw[symbol]).dropna()
 
-    # 요약정보 info와 describe
+    results = pd.DataFrame()
+    for SMA1, SMA2 in product(sma1, sma2):
+        data = pd.DataFrame(raw[symbol]).dropna()
+        # 요약정보 info와 describe
+        if show_info:
+            print(data.info())
+            print(data.describe())
+
+        # 장단기 이동평균선
+        data["SMA1"] = data[symbol].rolling(SMA1).mean()
+        data["SMA2"] = data[symbol].rolling(SMA2).mean()
+        if show_info:
+            print(data[[symbol, "SMA1", "SMA2"]].tail())
+
+        # 이동평균 매매전략 포지션
+        data.dropna(inplace=True)
+        data["positions"] = np.where(data["SMA1"] > data["SMA2"], 1, -1)
+
+        # 로그 주가 수익률 - 전날과 오늘 주가 차이 비율을 로그로...오르면 양의 수익, 내리면 음의 수익
+        data["returns"] = np.log(data[symbol] / data[symbol].shift(1))
+        # 전략 포지션을 하루 늦추고 수익률을 곱하는게 미래 예측을 막는다...
+        # 우선 수익이나 손실은 test_log_return() 주석 참고하고...
+        # 종가를 보고 이동평균을 계산하는데, 그럼 그 날은 들어갈 수가 없다...
+        # 따라서 포지션으로 먹거나 잃는 수익은 다음날 들어가서 얻을 수 있다.
+        data["strategy"] = data["returns"] * data["positions"].shift(1)
+        if show_info:
+            print(data.round(4).head())
+        data.dropna(inplace=True)
+        # 이렇게 되면 실제 수익률이 된다는 건데...
+        # 원래 복리 손익을 매일의 손익을 곱해야 한다.
+        # 로그 손익을 sum하면 다 더한 값인데, logA + logB = logAB 이므로 이게 된다.
+        # 여기에 exp 하면 log가 사라져서 AB만 남고, 이게 실제 수익률이다.
+        # returns는 애플 주식을 그냥 들고 있었을 때, strategy는 이동평균에 따라 손익을 바꿨을 때...
+        perf = np.exp(data[["returns", "strategy"]].sum())
+        new_result = pd.DataFrame(
+            {
+                "SMA1": SMA1,
+                "SMA2": SMA2,
+                "MARKET": perf["returns"],
+                "STRATEGY": perf["strategy"],
+                "OUT": perf["strategy"] - perf["returns"],
+            },
+            index=[0],
+        )
+        results = pd.concat([results, new_result], ignore_index=True)
+
+        # 그림 출력
+        data[[symbol, "SMA1", "SMA2", "positions"]].plot(
+            figsize=(10, 6), secondary_y="positions"
+        )
+        if show_plot:
+            plt.show()
+
+        ax = data[["returns", "strategy"]].cumsum().apply(np.exp).plot(figsize=(10, 6))
+        data["positions"].plot(ax=ax, secondary_y="positions", style="--")
+        ax.get_legend().set_bbox_to_anchor((0.25, 0.85))
+        if show_plot:
+            plt.show()
+
     if show_info:
-        print(data.info())
-        print(data.describe())
-
-    # 장단기 이동평균선
-    data["SMA1"] = data[symbol].rolling(SMA1).mean()
-    data["SMA2"] = data[symbol].rolling(SMA2).mean()
-    if show_info:
-        print(data[[symbol, "SMA1", "SMA2"]].tail())
-
-    # 이동평균 매매전략 포지션
-    data.dropna(inplace=True)
-    data["positions"] = np.where(data["SMA1"] > data["SMA2"], 1, -1)
-
-    # 로그 주가 수익률 - 전날과 오늘 주가 차이 비율을 로그로...오르면 양의 수익, 내리면 음의 수익
-    data["returns"] = np.log(data[symbol] / data[symbol].shift(1))
-    # 전략 포지션을 하루 늦추고 수익률을 곱하는게 미래 예측을 막는다...
-    # 우선 수익이나 손실은 test_log_return() 주석 참고하고...
-    # 종가를 보고 이동평균을 계산하는데, 그럼 그 날은 들어갈 수가 없다...
-    # 따라서 포지션으로 먹거나 잃는 수익은 다음날 들어가서 얻을 수 있다.
-    data["strategy"] = data["returns"] * data["positions"].shift(1)
-    if show_info:
-        print(data.round(4).head())
-    data.dropna(inplace=True)
-    # 이렇게 되면 실제 수익률이 된다는 건데...
-    # 원래 복리 손익을 매일의 손익을 곱해야 한다.
-    # 로그 손익을 sum하면 다 더한 값인데, logA + logB = logAB 이므로 이게 된다.
-    # 여기에 exp 하면 log가 사라져서 AB만 남고, 이게 실제 수익률이다.
-    # returns는 애플 주식을 그냥 들고 있었을 때, strategy는 이동평균에 따라 손익을 바꿨을 때...
-    print("로그 합:\n", data[["returns", "strategy"]].sum())
-    print("수익률 비교:\n", np.exp(data[["returns", "strategy"]].sum()) * 100)
-    print("위험도 비교:\n", data[["returns", "strategy"]].std() * 252**0.5 * 100)
-
-    # 그림 출력
-    data[[symbol, "SMA1", "SMA2", "positions"]].plot(
-        figsize=(10, 6), secondary_y="positions"
-    )
-    if show_plot:
-        plt.show()
-
-    ax = data[["returns", "strategy"]].cumsum().apply(np.exp).plot(figsize=(10, 6))
-    data["positions"].plot(ax=ax, secondary_y="positions", style="--")
-    ax.get_legend().set_bbox_to_anchor((0.25, 0.85))
-    if show_plot:
-        plt.show()
+        print(results.info())
+    print(results.sort_values(by="OUT", ascending=False).round(4))
 
 
 # 책 예제----------------------------------------------
@@ -82,17 +98,17 @@ filename = "data/tr_eikon_eod_data.csv"
 # 종목 애플
 symbol = "AAPL.O"
 # 장단기 이동평균선
-SMA1 = 42
-SMA2 = 252
-more = True
+SMA1 = [42]
+SMA2 = [252]
+more = False
 # 비트코인-----------------------------------------------
 # 데이터파일
 filename = "data/btc_usdt_1m_cache.csv"
 # 종목 애플
 symbol = "close"
 # 비트코인 1분 봉 2주간 테스트...아래 숫자가 제일 나은데...수수료 생각 안하고 7%? 안되겠다...
-SMA1 = 400
-SMA2 = 1000
+SMA1 = [200, 400, 600]
+SMA2 = [800, 1000, 1200]
 
 # 백테스트
 dual_SMA(filename, symbol, SMA1, SMA2, show_plot=more, show_info=more)
